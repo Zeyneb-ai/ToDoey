@@ -9,11 +9,17 @@ import UIKit
 
 class TodoListViewController : UITableViewController {
     
-    var itemArray = ["Study for Math Test", "Work on App", "Learn ML"]
+    var itemArray = [String]()
+    
+    let defaults = UserDefaults.standard
+    
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        if let items = defaults.array(forKey: "TodoListArray") as? [String]{
+            itemArray = items
+        }
         tableView.separatorStyle = .none
         
     }
@@ -59,6 +65,7 @@ class TodoListViewController : UITableViewController {
             //what happens when add item is clicked
             if textField.text!.trimmingCharacters(in: .whitespaces) != "" {
                 self.itemArray.append(textField.text!)
+                self.defaults.set(self.itemArray, forKey: "TodoListArray")
                 
                 self.tableView.reloadData()
                 
