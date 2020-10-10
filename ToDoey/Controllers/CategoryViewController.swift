@@ -6,21 +6,42 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 
 class CategoryViewController: UITableViewController {
     
+    let realm = try! Realm()  //codesmell
     
-    var categoryArray = [Category]()
+    var categoryArray: Results<Category>?
     
-    let context  = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
+        tableView.separatorStyle = .none
         
         loadData()
      
+    }
+    
+    
+    override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+        if editingStyle == .delete {
+            
+            if let cat = categoryArray?[indexPath.row] {
+               
+                do{
+                    try realm.write {
+                        realm.delete(cat)
+                        tableView.deleteRows(at: [indexPath], with: .fade)
+                }
+                }catch {
+                    print("error")
+                }
+                tableView.reloadData()
+            }
+        }
+        
+
     }
 
     
@@ -34,12 +55,12 @@ class CategoryViewController: UITableViewController {
             if textField.text!.trimmingCharacters(in: .whitespaces) != "" {
                
                 
-                let newCategory = Category(context: self.context)
+                let newCategory = Category()
                 newCategory.name = textField.text!
               
-                self.categoryArray.append(newCategory)
+                // Results is auto-updating! no need for: self.categoryArray.append(newCategory)
                 
-                self.saveCategories()
+                self.save(category: newCategory)
                 
                 
             }
@@ -61,12 +82,12 @@ class CategoryViewController: UITableViewController {
     
     // MARK: - Table view data source
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return categoryArray.count
+        return categoryArray?.count ?? 1 // if not nil return .count, if is nill, return 1
     }
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
         let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
-        cell.textLabel?.text = categoryArray[indexPath.row].name
+        cell.textLabel?.text = categoryArray?[indexPath.row].name ?? "No Todoey Lists Yet"
         
         return cell
         
@@ -79,7 +100,7 @@ class CategoryViewController: UITableViewController {
         let destinationVC = segue.destination as! TodoListViewController
         
         if let indexPath = tableView.indexPathForSelectedRow {
-            destinationVC.selectedCategory = categoryArray[indexPath.row]
+            destinationVC.selectedCategory = categoryArray?[indexPath.row]
         }
         
     }
@@ -95,10 +116,12 @@ class CategoryViewController: UITableViewController {
     
     // MARK: - Data manipulation
     
-    func saveCategories()  {
+    func save(category: Category)  {
         
         do {
-            try context.save()
+            try realm.write{
+                realm.add(category)
+            }
         } catch {
             print("encoding error: \(error)")
         }
@@ -107,14 +130,9 @@ class CategoryViewController: UITableViewController {
     }
     
     
-    func loadData(with request: NSFetchRequest<Category> = Category.fetchRequest() ){
+    func loadData(){
         
-    
-        do {
-            categoryArray = try context.fetch(request)
-        } catch {
-            print(error)
-        }
+        categoryArray = realm.objects(Category.self)
         self.tableView.reloadData()
     }
     
